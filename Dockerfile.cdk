@@ -1,0 +1,29 @@
+FROM eclipse-temurin:21-jdk
+
+# Install Node.js 20
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs maven && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install AWS CDK CLI
+RUN npm install -g aws-cdk
+
+# Set working directory
+WORKDIR /app
+
+# Copy all project files
+COPY pom.xml .
+COPY cdk/pom.xml ./cdk/
+COPY cdk/src ./cdk/src
+COPY cdk/cdk.json ./cdk/
+
+# Install parent pom
+RUN mvn install -N -q
+
+# Download CDK dependencies
+WORKDIR /app/cdk
+RUN mvn dependency:go-offline -q || true
+
+# Default command
+CMD ["cdk", "synth", "--app", "mvn -e -q compile exec:java"]

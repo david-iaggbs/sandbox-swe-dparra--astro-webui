@@ -1,0 +1,32 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Astro WebUI">
+  <main>
+    <h1>Hello World</h1>
+    <p>Astro SSR running on ECS Fargate</p>
+  </main>
+</Layout>
+
+<style>
+  main {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  p {
+    color: var(--color-muted);
+    font-size: 1.25rem;
+  }
+</style>

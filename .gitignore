@@ -1,0 +1,26 @@
+# Dependencies
+app/node_modules/
+
+# Astro build output
+app/dist/
+app/.astro/
+
+# CDK build output
+cdk/target/
+cdk/cdk.out/
+cdk/cdk.context.json
+
+# Maven
+target/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.*
