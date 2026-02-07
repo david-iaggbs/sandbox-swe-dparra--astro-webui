@@ -5,14 +5,21 @@ set -e
 # deploy-local-app.sh - Run and debug Astro WebUI locally
 # ==============================================================================
 #
+# This script starts the local development environment with:
+# - LocalStack for AWS services emulation (SSM Parameter Store)
+#
 # Usage:
 #   ./deploy-local-app.sh [command]
 #
 # Commands:
-#   start     Start the dev server (default)
-#   build     Build and preview the production build
-#   stop      Stop Docker containers (if running)
-#   clean     Remove node_modules and build artifacts
+#   start        Start LocalStack containers and run with SSM config (default)
+#   start-simple Start dev server without AWS emulation
+#   stop         Stop all containers
+#   restart      Restart containers and application
+#   logs         Show LocalStack initialization logs
+#   status       Show container status
+#   aws          Show LocalStack AWS resources
+#   clean        Stop containers and remove volumes
 #
 # ==============================================================================
 
@@ -42,6 +49,14 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Check if Docker is running
+check_docker() {
+    if ! docker info > /dev/null 2>&1; then
+        log_error "Docker is not running. Please start Docker and try again."
+        exit 1
+    fi
+}
+
 # Install dependencies if needed
 install_deps() {
     if [ ! -d "${APP_DIR}/node_modules" ]; then
@@ -52,43 +67,109 @@ install_deps() {
     fi
 }
 
-# Start dev server
-start_dev() {
+# Start containers
+start_containers() {
+    log_info "Starting LocalStack container..."
+    cd "${SCRIPT_DIR}"
+    docker-compose up -d
+
+    log_info "Waiting for LocalStack to be healthy..."
+
+    local retries=30
+    while ! curl -s http://localhost:4566/_localstack/health > /dev/null 2>&1; do
+        retries=$((retries - 1))
+        if [ $retries -le 0 ]; then
+            log_error "LocalStack failed to start"
+            exit 1
+        fi
+        sleep 1
+    done
+    log_success "LocalStack is ready"
+
+    # Show LocalStack logs to confirm initialization
+    log_info "LocalStack initialization logs:"
+    docker-compose logs localstack 2>&1 | grep -E "(Created|initialized|Ready|SSM)" | tail -10
+}
+
+# Stop containers
+stop_containers() {
+    log_info "Stopping containers..."
+    cd "${SCRIPT_DIR}"
+    docker-compose down
+    log_success "Containers stopped"
+}
+
+# Show container status
+show_status() {
+    cd "${SCRIPT_DIR}"
+    log_info "Container status:"
+    docker-compose ps
+    echo ""
+    log_info "LocalStack health:"
+    curl -s http://localhost:4566/_localstack/health | jq . 2>/dev/null || echo "LocalStack not running"
+}
+
+# Show LocalStack logs
+show_logs() {
+    cd "${SCRIPT_DIR}"
+    log_info "LocalStack logs:"
+    docker-compose logs -f localstack
+}
+
+# Show AWS resources in LocalStack
+show_aws_resources() {
+    log_info "SSM Parameter Store parameters:"
+    docker exec localstack awslocal ssm get-parameters-by-path \
+        --path "/astro-webui/" \
+        --region eu-west-1 2>/dev/null | jq . || echo "No parameters found"
+}
+
+# Run the application with LocalStack
+run_app_localstack() {
     install_deps
-    log_info "Starting Astro dev server..."
+    log_info "Running application with LocalStack SSM..."
+    echo ""
+    echo "=========================================="
+    echo "  Application URL: http://localhost:4321"
+    echo "  Health check:    http://localhost:4321/api/health"
+    echo "  Config endpoint: http://localhost:4321/api/config"
+    echo "=========================================="
+    echo ""
+
+    export AWS_SSM_ENDPOINT="http://localhost:4566"
+    export AWS_ACCESS_KEY_ID="test"
+    export AWS_SECRET_ACCESS_KEY="test"
+    export AWS_REGION="eu-west-1"
+    log_info "LocalStack environment variables set"
+
+    cd "${APP_DIR}"
+    npm run dev
+}
+
+# Run the application without AWS emulation
+run_app_simple() {
+    install_deps
+    log_info "Running application (no AWS emulation)..."
     echo ""
     echo "=========================================="
     echo "  Application URL: http://localhost:4321"
     echo "  Health check:    http://localhost:4321/api/health"
     echo "=========================================="
     echo ""
+
     cd "${APP_DIR}"
     npm run dev
 }
 
-# Build and preview production build
-build_preview() {
-    install_deps
-    log_info "Building production bundle..."
-    cd "${APP_DIR}"
-    npm run build
-    log_success "Build complete"
-    echo ""
-    echo "=========================================="
-    echo "  Preview URL: http://localhost:4321"
-    echo "  Health check: http://localhost:4321/api/health"
-    echo "=========================================="
-    echo ""
-    npm run preview
-}
-
-# Clean up
+# Clean up everything
 clean_all() {
-    log_warn "This will remove node_modules and build artifacts!"
+    log_warn "This will stop containers, remove volumes, node_modules, and build artifacts!"
     read -p "Are you sure? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        log_info "Cleaning up..."
+        log_info "Stopping containers and removing volumes..."
+        cd "${SCRIPT_DIR}"
+        docker-compose down -v 2>/dev/null || true
         rm -rf "${APP_DIR}/node_modules" "${APP_DIR}/dist"
         log_success "Cleanup complete"
     else
@@ -101,13 +182,19 @@ print_usage() {
     echo "Usage: $0 [command]"
     echo ""
     echo "Commands:"
-    echo "  start     Start the dev server (default)"
-    echo "  build     Build and preview the production build"
-    echo "  clean     Remove node_modules and build artifacts"
+    echo "  start        Start LocalStack and run with SSM config (default)"
+    echo "  start-simple Start dev server without AWS emulation"
+    echo "  stop         Stop all containers"
+    echo "  restart      Restart containers and application"
+    echo "  logs         Show LocalStack initialization logs"
+    echo "  status       Show container status"
+    echo "  aws          Show LocalStack AWS resources"
+    echo "  clean        Stop containers and remove volumes"
     echo ""
     echo "Examples:"
-    echo "  $0           # Start dev server"
-    echo "  $0 build     # Build and preview production"
+    echo "  $0              # Start with LocalStack (SSM Parameter Store)"
+    echo "  $0 start-simple # Start without AWS emulation"
+    echo "  $0 aws          # View AWS resources in LocalStack"
 }
 
 # Main
@@ -116,10 +203,30 @@ main() {
 
     case "$command" in
         start)
-            start_dev
+            check_docker
+            start_containers
+            run_app_localstack
             ;;
-        build)
-            build_preview
+        start-simple)
+            run_app_simple
+            ;;
+        stop)
+            stop_containers
+            ;;
+        restart)
+            check_docker
+            stop_containers
+            start_containers
+            run_app_localstack
+            ;;
+        logs)
+            show_logs
+            ;;
+        status)
+            show_status
+            ;;
+        aws)
+            show_aws_resources
             ;;
         clean)
             clean_all

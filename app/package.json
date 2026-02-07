@@ -7,10 +7,16 @@
     "build": "astro build",
     "preview": "astro preview",
     "start": "node dist/server/entry.mjs",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "astro": "^5.2.0",
-    "@astrojs/node": "^9.1.0"
+    "@astrojs/node": "^9.1.0",
+    "@aws-sdk/client-ssm": "^3.985.0",
+    "astro": "^5.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
   }
 }

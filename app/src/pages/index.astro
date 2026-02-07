@@ -1,32 +1,281 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { loadDescription } from '../lib/config';
+
+const description = await loadDescription();
 ---
 
-<Layout title="Astro WebUI">
+<Layout title="Greeting Service">
   <main>
-    <h1>Hello World</h1>
-    <p>Astro SSR running on ECS Fargate</p>
+    <h1>Greeting Service</h1>
+    <p class="description">{description}</p>
+
+    <section class="panel">
+      <h2>Create Greeting</h2>
+      <form id="create-form">
+        <div class="field">
+          <label for="create-name">Name</label>
+          <input id="create-name" name="name" type="text" placeholder="e.g. Morning" required />
+        </div>
+        <div class="field">
+          <label for="create-suffix">Message</label>
+          <input id="create-suffix" name="suffix" type="text" placeholder="e.g. Good morning!" required />
+        </div>
+        <button type="submit">Create</button>
+      </form>
+      <div id="create-result" class="result"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Lookup Greeting by ID</h2>
+      <form id="lookup-form">
+        <div class="field-row">
+          <input id="lookup-id" name="id" type="text" placeholder="Enter greeting UUID" required />
+          <button type="submit">Lookup</button>
+        </div>
+      </form>
+      <div id="lookup-result" class="result"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Delete Greeting by ID</h2>
+      <form id="delete-form">
+        <div class="field-row">
+          <input id="delete-id" name="id" type="text" placeholder="Enter greeting UUID" required />
+          <button type="submit" class="btn-danger">Delete</button>
+        </div>
+      </form>
+      <div id="delete-result" class="result"></div>
+    </section>
+
+    <section class="panel">
+      <h2>All Greetings</h2>
+      <button id="refresh-btn" type="button">Refresh List</button>
+      <div id="greetings-list" class="result">
+        <p class="muted">Click "Refresh List" to load greetings.</p>
+      </div>
+    </section>
   </main>
 </Layout>
 
+<script>
+  function el(id: string) { return document.getElementById(id)!; }
+
+  function showResult(targetId: string, html: string) {
+    el(targetId).innerHTML = html;
+  }
+
+  function showError(targetId: string, msg: string) {
+    showResult(targetId, `<p class="error">${msg}</p>`);
+  }
+
+  function greetingCard(g: any): string {
+    return `<div class="card">
+      <div class="card-header">
+        <strong>${g.name}</strong>
+        <code>${g.id}</code>
+      </div>
+      <p>${g.fullMessage}</p>
+      <div class="card-meta">Created: ${new Date(g.createdAt).toLocaleString()}</div>
+    </div>`;
+  }
+
+  // Create greeting
+  el('create-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (el('create-name') as HTMLInputElement).value;
+    const suffix = (el('create-suffix') as HTMLInputElement).value;
+    try {
+      const res = await fetch('/api/greetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, suffix }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showResult('create-result', `<p class="success">Created!</p>${greetingCard(data)}`);
+        (el('create-form') as HTMLFormElement).reset();
+      } else {
+        showError('create-result', data.message || `Error ${res.status}`);
+      }
+    } catch (err) {
+      showError('create-result', 'Failed to connect to API backend.');
+    }
+  });
+
+  // Lookup greeting
+  el('lookup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = (el('lookup-id') as HTMLInputElement).value;
+    try {
+      const res = await fetch(`/api/greetings/${id}`);
+      const data = await res.json();
+      if (res.ok) {
+        showResult('lookup-result', greetingCard(data));
+      } else {
+        showError('lookup-result', data.message || `Greeting not found (${res.status})`);
+      }
+    } catch (err) {
+      showError('lookup-result', 'Failed to connect to API backend.');
+    }
+  });
+
+  // Delete greeting
+  el('delete-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = (el('delete-id') as HTMLInputElement).value;
+    try {
+      const res = await fetch(`/api/greetings/${id}`, { method: 'DELETE' });
+      if (res.status === 204) {
+        showResult('delete-result', '<p class="success">Greeting deleted.</p>');
+        (el('delete-form') as HTMLFormElement).reset();
+      } else {
+        const data = await res.json();
+        showError('delete-result', data.message || `Error ${res.status}`);
+      }
+    } catch (err) {
+      showError('delete-result', 'Failed to connect to API backend.');
+    }
+  });
+
+  // Refresh list
+  async function loadGreetings() {
+    try {
+      const res = await fetch('/api/greetings');
+      const data = await res.json();
+      if (res.ok && Array.isArray(data) && data.length > 0) {
+        showResult('greetings-list', data.map(greetingCard).join(''));
+      } else if (res.ok) {
+        showResult('greetings-list', '<p class="muted">No greetings stored yet.</p>');
+      } else {
+        showError('greetings-list', data.message || `Error ${res.status}`);
+      }
+    } catch (err) {
+      showError('greetings-list', 'Failed to connect to API backend.');
+    }
+  }
+
+  el('refresh-btn').addEventListener('click', loadGreetings);
+</script>
+
 <style>
   main {
-    text-align: center;
-    padding: 2rem;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
   }
 
   h1 {
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
     background: linear-gradient(135deg, #667eea, #764ba2);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  p {
+  .description {
     color: var(--color-muted);
-    font-size: 1.25rem;
+    margin-bottom: 2rem;
+    line-height: 1.6;
   }
+
+  .panel {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .field {
+    margin-bottom: 0.5rem;
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-bottom: 0.2rem;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: var(--color-text);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+  }
+
+  input::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+  .field-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .field-row input { flex: 1; }
+
+  button {
+    padding: 0.5rem 1.25rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+  }
+
+  button:hover { opacity: 0.9; }
+
+  .btn-danger {
+    background: #dc2626;
+  }
+
+  .result { margin-top: 0.75rem; }
+
+  .card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .card-header code {
+    font-size: 0.7rem;
+    color: var(--color-muted);
+  }
+
+  .card p {
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+  }
+
+  .card-meta {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+
+  .success { color: #22c55e; }
+  .error { color: #ef4444; }
+  .muted { color: var(--color-muted); font-size: 0.9rem; }
 </style>
