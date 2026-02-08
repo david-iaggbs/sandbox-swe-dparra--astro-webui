@@ -83,22 +83,28 @@ const description = await loadDescription();
 <script>
   function el(id: string) { return document.getElementById(id)!; }
 
+  function esc(str: string): string {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
   function showResult(targetId: string, html: string) {
     el(targetId).innerHTML = html;
   }
 
   function showError(targetId: string, msg: string) {
-    showResult(targetId, `<p class="error">${msg}</p>`);
+    showResult(targetId, `<p class="error">${esc(msg)}</p>`);
   }
 
   function greetingCard(g: any): string {
     return `<div class="card">
       <div class="card-row">
-        <span class="card-name">${g.name}</span>
-        <span class="card-id">${g.id}</span>
+        <span class="card-name">${esc(g.name)}</span>
+        <span class="card-id">${esc(g.id)}</span>
       </div>
-      <div class="card-message">${g.fullMessage}</div>
-      <div class="card-meta">Created: ${new Date(g.createdAt).toLocaleString()}</div>
+      <div class="card-message">${esc(g.fullMessage)}</div>
+      <div class="card-meta">Created: ${esc(new Date(g.createdAt).toLocaleString())}</div>
     </div>`;
   }
 

@@ -43,6 +43,16 @@ describe('GET /api/greetings', () => {
 
     expect(response.status).toBe(500);
   });
+
+  it('returns 502 when backend is unreachable', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+
+    const { GET } = await import('./index');
+    const response = await GET({} as any);
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ message: 'Service temporarily unavailable' });
+  });
 });
 
 describe('POST /api/greetings', () => {
@@ -95,5 +105,20 @@ describe('POST /api/greetings', () => {
     const response = await POST({ request: mockRequest } as any);
 
     expect(response.status).toBe(409);
+  });
+
+  it('returns 502 when backend is unreachable', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+
+    const mockRequest = new Request('http://localhost/api/greetings', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Test', suffix: 'test' }),
+    });
+
+    const { POST } = await import('./index');
+    const response = await POST({ request: mockRequest } as any);
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ message: 'Service temporarily unavailable' });
   });
 });

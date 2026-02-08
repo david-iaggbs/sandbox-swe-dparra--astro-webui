@@ -45,6 +45,16 @@ describe('GET /api/greetings/:id', () => {
 
     expect(response.status).toBe(404);
   });
+
+  it('returns 502 when backend is unreachable', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+
+    const { GET } = await import('./[id]');
+    const response = await GET({ params: { id: TEST_ID } } as any);
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ message: 'Service temporarily unavailable' });
+  });
 });
 
 describe('DELETE /api/greetings/:id', () => {
@@ -92,5 +102,15 @@ describe('DELETE /api/greetings/:id', () => {
 
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ message: 'Not found' });
+  });
+
+  it('returns 502 when backend is unreachable', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+
+    const { DELETE } = await import('./[id]');
+    const response = await DELETE({ params: { id: TEST_ID } } as any);
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ message: 'Service temporarily unavailable' });
   });
 });
