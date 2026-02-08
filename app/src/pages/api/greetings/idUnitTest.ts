@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../lib/config', () => ({
-  getApiBackendUrl: () => 'http://mock-backend:8080',
+  getApiBackendUrl: async () => 'http://mock-backend:8080',
+  getApiTimeoutMs: async () => 5000,
+  getApiRetryCount: async () => 0,
 }));
 
 const mockFetch = vi.fn();
@@ -25,7 +27,8 @@ describe('GET /api/greetings/:id', () => {
     const response = await GET({ params: { id: TEST_ID } } as any);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      `http://mock-backend:8080/api/v1/greetings/${TEST_ID}`
+      `http://mock-backend:8080/api/v1/greetings/${TEST_ID}`,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(greeting);
@@ -60,7 +63,7 @@ describe('DELETE /api/greetings/:id', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       `http://mock-backend:8080/api/v1/greetings/${TEST_ID}`,
-      { method: 'DELETE' }
+      expect.objectContaining({ method: 'DELETE', signal: expect.any(AbortSignal) })
     );
     expect(response.status).toBe(204);
   });

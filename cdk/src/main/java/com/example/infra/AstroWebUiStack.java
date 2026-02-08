@@ -40,15 +40,19 @@ import software.amazon.awscdk.services.elasticloadbalancingv2.IApplicationLoadBa
 import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerAction;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerCondition;
 import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
+import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
+import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.logs.LogGroup;
 import software.amazon.awscdk.services.logs.RetentionDays;
+import software.amazon.awscdk.services.ssm.StringParameter;
 import software.constructs.Construct;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -93,22 +97,25 @@ public class AstroWebUiStack extends Stack {
         // Step 4: Create IAM Roles
         createIamRoles();
 
-        // Step 5: Create Security Group
+        // Step 5: Create SSM Parameters
+        createSsmParameters();
+
+        // Step 6: Create Security Group
         createSecurityGroup();
 
-        // Step 6: Create ALB Target Group
+        // Step 7: Create ALB Target Group
         createTargetGroup();
 
-        // Step 7: Create ALB Listener Rule
+        // Step 8: Create ALB Listener Rule
         createListenerRule();
 
-        // Step 8: Create ECS Task Definition
+        // Step 9: Create ECS Task Definition
         createTaskDefinition();
 
-        // Step 9: Create ECS Service
+        // Step 10: Create ECS Service
         createEcsService();
 
-        // Step 10: Create Stack Outputs
+        // Step 11: Create Stack Outputs
         createOutputs();
     }
 
@@ -208,12 +215,67 @@ public class AstroWebUiStack extends Stack {
                 .description("ECS Task Role for " + serviceName)
                 .build();
 
+        taskRole.addToPolicy(PolicyStatement.Builder.create()
+                .effect(Effect.ALLOW)
+                .actions(List.of("ssm:GetParameter"))
+                .resources(List.of(
+                        "arn:aws:ssm:" + config.getAwsEnvironment().region()
+                        + ":" + config.getAwsEnvironment().accountId()
+                        + ":parameter/" + serviceName + "/*"))
+                .build());
+
         Tags.of(taskRole).add("Name", serviceName + "-task-role");
         Tags.of(taskRole).add("Environment", env);
     }
 
     /**
-     * Step 5: Create Security Group allowing traffic from ALB.
+     * Step 5: Create SSM Parameter Store entries for application configuration.
+     */
+    private void createSsmParameters() {
+        String serviceName = config.getServiceName();
+
+        StringParameter.Builder.create(this, "AppDescriptionParameter")
+                .parameterName("/" + serviceName + "/app.description")
+                .stringValue("This application manages a greeting service. "
+                        + "You can create new greetings, look up existing ones by ID, "
+                        + "delete greetings, and browse all stored messages. "
+                        + "It communicates with the Spring Cloud Service API backend.")
+                .description("Application description for " + serviceName)
+                .build();
+
+        StringParameter.Builder.create(this, "ApiBackendUrlParameter")
+                .parameterName("/" + serviceName + "/api.backend.url")
+                .stringValue("http://localhost:8080")
+                .description("Backend API base URL for " + serviceName)
+                .build();
+
+        StringParameter.Builder.create(this, "ApiTimeoutMsParameter")
+                .parameterName("/" + serviceName + "/api.timeout.ms")
+                .stringValue("5000")
+                .description("Backend API request timeout in milliseconds")
+                .build();
+
+        StringParameter.Builder.create(this, "ApiRetryCountParameter")
+                .parameterName("/" + serviceName + "/api.retry.count")
+                .stringValue("3")
+                .description("Backend API request retry count")
+                .build();
+
+        StringParameter.Builder.create(this, "LogLevelParameter")
+                .parameterName("/" + serviceName + "/log.level")
+                .stringValue("info")
+                .description("Application log level")
+                .build();
+
+        StringParameter.Builder.create(this, "RateLimitRpmParameter")
+                .parameterName("/" + serviceName + "/rate.limit.rpm")
+                .stringValue("60")
+                .description("Rate limit in requests per minute")
+                .build();
+    }
+
+    /**
+     * Step 6: Create Security Group allowing traffic from ALB.
      */
     private void createSecurityGroup() {
         String serviceName = config.getServiceName();
@@ -238,7 +300,7 @@ public class AstroWebUiStack extends Stack {
     }
 
     /**
-     * Step 6: Create ALB Target Group with health check.
+     * Step 7: Create ALB Target Group with health check.
      */
     private void createTargetGroup() {
         String serviceName = config.getServiceName();
@@ -269,7 +331,7 @@ public class AstroWebUiStack extends Stack {
     }
 
     /**
-     * Step 7: Create ALB Listener Rule for path-based routing.
+     * Step 8: Create ALB Listener Rule for path-based routing.
      */
     private void createListenerRule() {
         RoutingConfig routing = config.getRoutingConfig();
@@ -288,7 +350,7 @@ public class AstroWebUiStack extends Stack {
     }
 
     /**
-     * Step 8: Create ECS Fargate Task Definition.
+     * Step 9: Create ECS Fargate Task Definition.
      */
     private void createTaskDefinition() {
         String serviceName = config.getServiceName();
@@ -307,6 +369,8 @@ public class AstroWebUiStack extends Stack {
         Map<String, String> environmentVars = new HashMap<>();
         environmentVars.put("HOST", "0.0.0.0");
         environmentVars.put("PORT", String.valueOf(container.port()));
+        environmentVars.put("SERVICE_NAME", serviceName);
+        environmentVars.put("AWS_REGION", config.getAwsEnvironment().region());
 
         taskDefinition.addContainer("ServiceContainer",
                 ContainerDefinitionOptions.builder()
@@ -330,7 +394,7 @@ public class AstroWebUiStack extends Stack {
     }
 
     /**
-     * Step 9: Create ECS Fargate Service.
+     * Step 10: Create ECS Fargate Service.
      */
     private void createEcsService() {
         String serviceName = config.getServiceName();
@@ -357,7 +421,7 @@ public class AstroWebUiStack extends Stack {
     }
 
     /**
-     * Step 10: Create CloudFormation Outputs.
+     * Step 11: Create CloudFormation Outputs.
      */
     private void createOutputs() {
         String serviceName = config.getServiceName();

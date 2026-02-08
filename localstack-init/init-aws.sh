@@ -16,6 +16,41 @@ awslocal ssm put-parameter \
   --region "${REGION}" \
   --overwrite
 
+awslocal ssm put-parameter \
+  --name "/${SERVICE_NAME}/api.backend.url" \
+  --value "http://host.docker.internal:8080" \
+  --type String \
+  --region "${REGION}" \
+  --overwrite
+
+awslocal ssm put-parameter \
+  --name "/${SERVICE_NAME}/api.timeout.ms" \
+  --value "5000" \
+  --type String \
+  --region "${REGION}" \
+  --overwrite
+
+awslocal ssm put-parameter \
+  --name "/${SERVICE_NAME}/api.retry.count" \
+  --value "3" \
+  --type String \
+  --region "${REGION}" \
+  --overwrite
+
+awslocal ssm put-parameter \
+  --name "/${SERVICE_NAME}/log.level" \
+  --value "debug" \
+  --type String \
+  --region "${REGION}" \
+  --overwrite
+
+awslocal ssm put-parameter \
+  --name "/${SERVICE_NAME}/rate.limit.rpm" \
+  --value "60" \
+  --type String \
+  --region "${REGION}" \
+  --overwrite
+
 echo "==> SSM parameters initialized:"
 awslocal ssm get-parameters-by-path \
   --path "/${SERVICE_NAME}/" \

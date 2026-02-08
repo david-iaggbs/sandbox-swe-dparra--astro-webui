@@ -19,34 +19,23 @@ describe('config', () => {
     delete process.env.AWS_ACCESS_KEY_ID;
     delete process.env.AWS_SECRET_ACCESS_KEY;
     delete process.env.AWS_REGION;
-    delete process.env.API_BACKEND_URL;
     delete process.env.SERVICE_NAME;
   });
 
-  describe('getApiBackendUrl', () => {
-    it('returns default when API_BACKEND_URL is not set', async () => {
-      const { getApiBackendUrl } = await import('./config');
-      expect(getApiBackendUrl()).toBe('http://localhost:8080');
-    });
-
-    it('returns env var when API_BACKEND_URL is set', async () => {
-      process.env.API_BACKEND_URL = 'http://my-backend:9090';
-      const { getApiBackendUrl } = await import('./config');
-      expect(getApiBackendUrl()).toBe('http://my-backend:9090');
-    });
-  });
-
   describe('loadDescription', () => {
-    it('returns default description when SSM endpoint is not configured', async () => {
-      const { loadDescription } = await import('./config');
+    it('returns SSM value using default endpoint (production mode)', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: 'Description from AWS SSM' },
+      });
 
+      const { loadDescription } = await import('./config');
       const description = await loadDescription();
 
-      expect(description).toContain('greeting service');
-      expect(description).toContain('Spring Cloud Service API backend');
+      expect(description).toBe('Description from AWS SSM');
+      expect(mockSend).toHaveBeenCalledOnce();
     });
 
-    it('returns SSM value when SSM endpoint is configured and parameter exists', async () => {
+    it('returns SSM value when SSM endpoint is overridden (LocalStack)', async () => {
       process.env.AWS_SSM_ENDPOINT = 'http://localhost:4566';
       process.env.AWS_ACCESS_KEY_ID = 'test';
       process.env.AWS_SECRET_ACCESS_KEY = 'test';
@@ -62,10 +51,6 @@ describe('config', () => {
     });
 
     it('returns default description when SSM call fails', async () => {
-      process.env.AWS_SSM_ENDPOINT = 'http://localhost:4566';
-      process.env.AWS_ACCESS_KEY_ID = 'test';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test';
-
       mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
 
       const { loadDescription } = await import('./config');
@@ -75,16 +60,102 @@ describe('config', () => {
     });
 
     it('returns default description when SSM returns no value', async () => {
-      process.env.AWS_SSM_ENDPOINT = 'http://localhost:4566';
-      process.env.AWS_ACCESS_KEY_ID = 'test';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test';
-
       mockSend.mockResolvedValueOnce({ Parameter: { Value: undefined } });
 
       const { loadDescription } = await import('./config');
       const description = await loadDescription();
 
       expect(description).toContain('greeting service');
+    });
+  });
+
+  describe('getApiBackendUrl', () => {
+    it('returns SSM value when parameter exists', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: 'http://my-backend:9090' },
+      });
+
+      const { getApiBackendUrl } = await import('./config');
+      expect(await getApiBackendUrl()).toBe('http://my-backend:9090');
+    });
+
+    it('returns default when SSM call fails', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
+
+      const { getApiBackendUrl } = await import('./config');
+      expect(await getApiBackendUrl()).toBe('http://localhost:8080');
+    });
+  });
+
+  describe('getApiTimeoutMs', () => {
+    it('returns SSM value as number', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: '10000' },
+      });
+
+      const { getApiTimeoutMs } = await import('./config');
+      expect(await getApiTimeoutMs()).toBe(10000);
+    });
+
+    it('returns default when SSM call fails', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
+
+      const { getApiTimeoutMs } = await import('./config');
+      expect(await getApiTimeoutMs()).toBe(5000);
+    });
+  });
+
+  describe('getApiRetryCount', () => {
+    it('returns SSM value as number', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: '5' },
+      });
+
+      const { getApiRetryCount } = await import('./config');
+      expect(await getApiRetryCount()).toBe(5);
+    });
+
+    it('returns default when SSM call fails', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
+
+      const { getApiRetryCount } = await import('./config');
+      expect(await getApiRetryCount()).toBe(3);
+    });
+  });
+
+  describe('getLogLevel', () => {
+    it('returns SSM value', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: 'debug' },
+      });
+
+      const { getLogLevel } = await import('./config');
+      expect(await getLogLevel()).toBe('debug');
+    });
+
+    it('returns default when SSM call fails', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
+
+      const { getLogLevel } = await import('./config');
+      expect(await getLogLevel()).toBe('info');
+    });
+  });
+
+  describe('getRateLimitRpm', () => {
+    it('returns SSM value as number', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: '120' },
+      });
+
+      const { getRateLimitRpm } = await import('./config');
+      expect(await getRateLimitRpm()).toBe(120);
+    });
+
+    it('returns default when SSM call fails', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
+
+      const { getRateLimitRpm } = await import('./config');
+      expect(await getRateLimitRpm()).toBe(60);
     });
   });
 });
