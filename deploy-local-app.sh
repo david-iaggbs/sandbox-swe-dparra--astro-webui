@@ -137,8 +137,6 @@ run_app_localstack() {
     echo ""
 
     export AWS_SSM_ENDPOINT="http://localhost:4566"
-    export AWS_ACCESS_KEY_ID="test"
-    export AWS_SECRET_ACCESS_KEY="test"
     export AWS_REGION="eu-west-1"
     log_info "LocalStack environment variables set"
 

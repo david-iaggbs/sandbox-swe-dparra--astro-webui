@@ -16,8 +16,6 @@ describe('config', () => {
     vi.resetModules();
     mockSend.mockReset();
     delete process.env.AWS_SSM_ENDPOINT;
-    delete process.env.AWS_ACCESS_KEY_ID;
-    delete process.env.AWS_SECRET_ACCESS_KEY;
     delete process.env.AWS_REGION;
     delete process.env.SERVICE_NAME;
   });
@@ -37,8 +35,6 @@ describe('config', () => {
 
     it('returns SSM value when SSM endpoint is overridden (LocalStack)', async () => {
       process.env.AWS_SSM_ENDPOINT = 'http://localhost:4566';
-      process.env.AWS_ACCESS_KEY_ID = 'test';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test';
 
       mockSend.mockResolvedValueOnce({
         Parameter: { Value: 'Custom description from SSM' },
