@@ -13,6 +13,11 @@ function createSsmClient(): SSMClient {
 
 const ssmClient = createSsmClient();
 
+function parseIntOrDefault(value: string, fallback: number): number {
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 const DEFAULT_DESCRIPTION =
   'This application manages a greeting service. ' +
   'You can create new greetings, look up existing ones by ID, ' +
@@ -25,7 +30,8 @@ async function getParameter(name: string, fallback: string): Promise<string> {
       new GetParameterCommand({ Name: `/${SERVICE_NAME}/${name}` })
     );
     return response.Parameter?.Value ?? fallback;
-  } catch {
+  } catch (error) {
+    console.error(`SSM parameter /${SERVICE_NAME}/${name} fetch failed, using fallback`, error);
     return fallback;
   }
 }
@@ -40,12 +46,12 @@ export async function getApiBackendUrl(): Promise<string> {
 
 export async function getApiTimeoutMs(): Promise<number> {
   const value = await getParameter('api.timeout.ms', '5000');
-  return parseInt(value, 10);
+  return parseIntOrDefault(value, 5000);
 }
 
 export async function getApiRetryCount(): Promise<number> {
   const value = await getParameter('api.retry.count', '3');
-  return parseInt(value, 10);
+  return parseIntOrDefault(value, 3);
 }
 
 export async function getLogLevel(): Promise<string> {
@@ -54,5 +60,5 @@ export async function getLogLevel(): Promise<string> {
 
 export async function getRateLimitRpm(): Promise<number> {
   const value = await getParameter('rate.limit.rpm', '60');
-  return parseInt(value, 10);
+  return parseIntOrDefault(value, 60);
 }

@@ -99,6 +99,15 @@ describe('config', () => {
       const { getApiTimeoutMs } = await import('./config');
       expect(await getApiTimeoutMs()).toBe(5000);
     });
+
+    it('returns default when SSM returns non-numeric value', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: 'not-a-number' },
+      });
+
+      const { getApiTimeoutMs } = await import('./config');
+      expect(await getApiTimeoutMs()).toBe(5000);
+    });
   });
 
   describe('getApiRetryCount', () => {
@@ -113,6 +122,15 @@ describe('config', () => {
 
     it('returns default when SSM call fails', async () => {
       mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
+
+      const { getApiRetryCount } = await import('./config');
+      expect(await getApiRetryCount()).toBe(3);
+    });
+
+    it('returns default when SSM returns non-numeric value', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: 'abc' },
+      });
 
       const { getApiRetryCount } = await import('./config');
       expect(await getApiRetryCount()).toBe(3);
@@ -149,6 +167,15 @@ describe('config', () => {
 
     it('returns default when SSM call fails', async () => {
       mockSend.mockRejectedValueOnce(new Error('Parameter not found'));
+
+      const { getRateLimitRpm } = await import('./config');
+      expect(await getRateLimitRpm()).toBe(60);
+    });
+
+    it('returns default when SSM returns non-numeric value', async () => {
+      mockSend.mockResolvedValueOnce({
+        Parameter: { Value: '' },
+      });
 
       const { getRateLimitRpm } = await import('./config');
       expect(await getRateLimitRpm()).toBe(60);
