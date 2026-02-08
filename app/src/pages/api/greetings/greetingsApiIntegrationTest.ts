@@ -2,10 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
  * Integration tests for the Greetings API proxy layer.
- * Only the external backend (spring-cloud-service) is mocked via fetch.
+ * The external backend (spring-cloud-service) is mocked via fetch.
+ * The SSM client is mocked to return fallback defaults (no AWS in CI).
  * The config module, API route handlers, and request/response pipeline
  * are exercised as a whole.
  */
+
+vi.mock('@aws-sdk/client-ssm', () => ({
+  SSMClient: class {
+    send = vi.fn().mockRejectedValue(new Error('SSM not available in test'));
+  },
+  GetParameterCommand: class {
+    constructor(public input: any) {}
+  },
+}));
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);

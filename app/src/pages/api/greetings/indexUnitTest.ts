@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../lib/config', () => ({
-  getApiBackendUrl: () => 'http://mock-backend:8080',
+  getApiBackendUrl: async () => 'http://mock-backend:8080',
+  getApiTimeoutMs: async () => 5000,
+  getApiRetryCount: async () => 0,
 }));
 
 const mockFetch = vi.fn();
@@ -22,7 +24,10 @@ describe('GET /api/greetings', () => {
     const { GET } = await import('./index');
     const response = await GET({} as any);
 
-    expect(mockFetch).toHaveBeenCalledWith('http://mock-backend:8080/api/v1/greetings');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://mock-backend:8080/api/v1/greetings',
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(greetings);
   });
@@ -62,11 +67,15 @@ describe('POST /api/greetings', () => {
     const { POST } = await import('./index');
     const response = await POST({ request: mockRequest } as any);
 
-    expect(mockFetch).toHaveBeenCalledWith('http://mock-backend:8080/api/v1/greetings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: requestBody,
-    });
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://mock-backend:8080/api/v1/greetings',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+        signal: expect.any(AbortSignal),
+      })
+    );
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual(created);
   });
