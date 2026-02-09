@@ -371,6 +371,8 @@ public class AstroWebUiStack extends Stack {
         environmentVars.put("PORT", String.valueOf(container.port()));
         environmentVars.put("SERVICE_NAME", serviceName);
         environmentVars.put("AWS_REGION", config.getAwsEnvironment().region());
+        environmentVars.put("OTEL_SERVICE_NAME", serviceName);
+        environmentVars.put("NODE_ENV", "production");
 
         taskDefinition.addContainer("ServiceContainer",
                 ContainerDefinitionOptions.builder()

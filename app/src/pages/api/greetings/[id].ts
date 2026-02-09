@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getApiBackendUrl } from '../../../lib/config';
 import { fetchWithRetry } from '../../../lib/fetchWithRetry';
+import logger from '../../../lib/logger';
 
 export const GET: APIRoute = async ({ params }) => {
   try {
@@ -10,7 +11,8 @@ export const GET: APIRoute = async ({ params }) => {
       status: res.status,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch {
+  } catch (err) {
+    logger.error({ err, greetingId: params.id }, 'GET /api/greetings/:id failed');
     return new Response(JSON.stringify({ message: 'Service temporarily unavailable' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' },
@@ -28,7 +30,8 @@ export const DELETE: APIRoute = async ({ params }) => {
       status: res.status,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch {
+  } catch (err) {
+    logger.error({ err, greetingId: params.id }, 'DELETE /api/greetings/:id failed');
     return new Response(JSON.stringify({ message: 'Service temporarily unavailable' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' },
