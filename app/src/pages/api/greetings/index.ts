@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getApiBackendUrl } from '../../../lib/config';
 import { fetchWithRetry } from '../../../lib/fetchWithRetry';
+import logger from '../../../lib/logger';
 
 export const GET: APIRoute = async () => {
   try {
@@ -10,7 +11,8 @@ export const GET: APIRoute = async () => {
       status: res.status,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch {
+  } catch (err) {
+    logger.error({ err }, 'GET /api/greetings failed');
     return new Response(JSON.stringify({ message: 'Service temporarily unavailable' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' },
@@ -31,7 +33,8 @@ export const POST: APIRoute = async ({ request }) => {
       status: res.status,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch {
+  } catch (err) {
+    logger.error({ err }, 'POST /api/greetings failed');
     return new Response(JSON.stringify({ message: 'Service temporarily unavailable' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' },

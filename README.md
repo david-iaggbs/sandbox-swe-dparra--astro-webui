@@ -97,3 +97,37 @@ Astro SSR application using the Node.js standalone adapter:
 - **Health endpoint**: `GET /api/health` returns `{"status": "UP"}`
 - **Rendering**: Server-side rendering (SSR) mode
 - **Container**: Multi-stage build with `node:20-alpine`
+
+## Observability
+
+### OpenTelemetry
+
+The application uses OpenTelemetry for distributed tracing, aligned with the [spring-cloud-service](https://github.com/david-iaggbs/sandbox-swe-dparra--spring-cloud-service) backend pattern.
+
+**How it works:** The OTel SDK is loaded before the app via `node --import ./instrumentation.mjs`. Auto-instrumentation patches `http`, `fetch`, `@aws-sdk`, and `pino` to generate trace spans automatically. When `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, the SDK is a complete no-op.
+
+| Environment | Traces | Endpoint | Jaeger UI |
+|---|---|---|---|
+| Local (localstack) | OTLP HTTP → Jaeger | `http://localhost:4318` | `http://localhost:16686` |
+| AWS | Disabled | — | — |
+
+> AWS tracing will be enabled when an ADOT sidecar is added to the ECS task definition.
+
+### Structured Logging
+
+The application uses [pino](https://github.com/pinojs/pino) for structured JSON logging to stdout (captured by CloudWatch via ECS `awslogs` driver). When OTel is active, pino logs are automatically enriched with `trace_id` and `span_id` for correlation.
+
+The log level is read from SSM Parameter Store (`/{service}/log.level`) at startup, with a fallback to `info`.
+
+### SSM Parameter Store
+
+Runtime configuration is read from AWS SSM Parameter Store. In production, the ECS task role has `ssm:GetParameter` permission. Locally, LocalStack provides the SSM service.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `/{service}/app.description` | *(built-in text)* | Application description shown on the UI |
+| `/{service}/api.backend.url` | `http://localhost:8080` | Spring Cloud Service backend URL |
+| `/{service}/api.timeout.ms` | `5000` | Backend request timeout in milliseconds |
+| `/{service}/api.retry.count` | `3` | Number of retry attempts on backend failure |
+| `/{service}/log.level` | `info` | Application log level (debug, info, warn, error) |
+| `/{service}/rate.limit.rpm` | `60` | Rate limit in requests per minute |

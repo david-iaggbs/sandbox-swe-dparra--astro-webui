@@ -133,12 +133,15 @@ run_app_localstack() {
     echo "  Application URL: http://localhost:4321"
     echo "  Health check:    http://localhost:4321/api/health"
     echo "  Config endpoint: http://localhost:4321/api/config"
+    echo "  Jaeger UI:       http://localhost:16686"
     echo "=========================================="
     echo ""
 
     export AWS_SSM_ENDPOINT="http://localhost:4566"
     export AWS_REGION="eu-west-1"
+    export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
     log_info "LocalStack environment variables set"
+    log_info "Jaeger UI: http://localhost:16686"
 
     cd "${APP_DIR}"
     npm run dev

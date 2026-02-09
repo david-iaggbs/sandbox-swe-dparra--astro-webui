@@ -6,6 +6,11 @@ vi.mock('../../../lib/config', () => ({
   getApiRetryCount: async () => 0,
 }));
 
+vi.mock('../../../lib/logger', () => ({
+  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  initLogLevel: vi.fn(),
+}));
+
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
