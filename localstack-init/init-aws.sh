@@ -18,7 +18,7 @@ awslocal ssm put-parameter \
 
 awslocal ssm put-parameter \
   --name "/${SERVICE_NAME}/api.backend.url" \
-  --value "http://host.docker.internal:8080" \
+  --value "http://localhost:8080" \
   --type String \
   --region "${REGION}" \
   --overwrite

@@ -245,7 +245,7 @@ public class AstroWebUiStack extends Stack {
 
         StringParameter.Builder.create(this, "ApiBackendUrlParameter")
                 .parameterName("/" + serviceName + "/api.backend.url")
-                .stringValue("http://localhost:8080")
+                .stringValue("http://" + alb.getLoadBalancerDnsName())
                 .description("Backend API base URL for " + serviceName)
                 .build();
 
