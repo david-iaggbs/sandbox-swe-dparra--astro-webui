@@ -1,0 +1,87 @@
+{
+  "name": "Astro WebUI",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21",
+      "jdkDistro": "tem",
+      "installMaven": "true",
+      "mavenVersion": "3.9.6"
+    },
+    "ghcr.io/devcontainers/features/aws-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "astro-build.astro-vscode",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "amazonwebservices.aws-toolkit-vscode",
+        "vscjava.vscode-java-pack",
+        "redhat.vscode-yaml",
+        "humao.rest-client",
+        "eamodio.gitlens",
+        "streetsidesoftware.code-spell-checker"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "files.exclude": {
+          "**/node_modules": true,
+          "**/dist": true,
+          "**/target": true,
+          "**/.git": true,
+          "**/.DS_Store": true
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [4321, 4566, 16686, 4318],
+  "portsAttributes": {
+    "4321": {
+      "label": "Astro WebUI",
+      "onAutoForward": "notify"
+    },
+    "4566": {
+      "label": "LocalStack",
+      "onAutoForward": "silent"
+    },
+    "16686": {
+      "label": "Jaeger UI",
+      "onAutoForward": "notify"
+    },
+    "4318": {
+      "label": "OTLP Collector",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "remoteUser": "vscode",
+
+  "containerEnv": {
+    "AWS_SSM_ENDPOINT": "http://localstack:4566",
+    "AWS_REGION": "eu-west-1",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://jaeger:4318"
+  }
+}

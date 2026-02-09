@@ -15,6 +15,18 @@ A reference frontend application built with Astro SSR, designed to run on AWS EC
 
 ## Quick Start
 
+### GitHub Codespaces (recommended)
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/david-iaggbs/sandbox-swe-dparra--astro-webui)
+
+The repository includes a full devcontainer configuration. Codespaces starts with LocalStack (SSM), Jaeger (tracing), and all tools pre-installed. Once ready:
+
+```bash
+cd app && npm run dev
+```
+
+### Local Development
+
 ```bash
 # Start everything (LocalStack, Jaeger, Astro dev server)
 ./deploy-local-app.sh
@@ -47,6 +59,11 @@ A reference frontend application built with Astro SSR, designed to run on AWS EC
 
 ```
 astro-webui/
+├── .devcontainer/          # GitHub Codespaces / devcontainer config
+│   ├── devcontainer.json   # Container features, extensions, ports
+│   ├── docker-compose.yml  # LocalStack + Jaeger for Codespaces
+│   ├── post-create.sh      # Post-creation setup script
+│   └── localstack-init/    # SSM parameter seeding (Codespaces)
 ├── app/                    # Astro SSR application
 │   ├── src/pages/          # Pages and API routes
 │   ├── src/lib/            # Shared modules (config, logger, fetchWithRetry)
@@ -60,6 +77,7 @@ astro-webui/
 │   ├── src/test/java/      # CDK unit tests
 │   ├── cdk.json            # CDK context configuration
 │   └── pom.xml
+├── docs/                   # Learning path (10 lessons)
 ├── localstack-init/        # LocalStack initialization (SSM parameters)
 ├── docker-compose.yml      # Local development stack (LocalStack + Jaeger)
 ├── deploy-local-app.sh     # Run locally
